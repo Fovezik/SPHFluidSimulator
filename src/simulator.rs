@@ -10,9 +10,9 @@ pub struct Simulator {
     pub box_size: f32, // Rozmiar pudełka symulacji
     pub wall_damping: f32, // Współczynnik tłumienia przy kolizji ze ścianami
     pub h: f32, // Promień oddziaływania cząstek
-    pub mass: f32, // Masa pojedynczej cząstki
+    pub particle_mass: f32, // Masa pojedynczej cząstki
     pub rest_density: f32, // Gęstość spoczynkowa płynu
-    pub gas_const: f32, // Stała gazowa używana do obliczania ciśnienia
+    pub gas_constant: f32, // Stała gazowa używana do obliczania ciśnienia
     pub viscosity: f32, // Współczynnik lepkości płynu
     grid: Grid, // Siatka przestrzenna do przyspieszenia wyszukiwania sąsiadów
 }
@@ -20,16 +20,16 @@ pub struct Simulator {
 // Implementacja symulatora SPH
 impl Simulator {
     // Konstruktor symulatora
-    pub fn new(box_size: f32, viscosity: f32) -> Self {
-        let h = 1.2;
+    pub fn new(box_size: f32, viscosity: f32, rest_density: f32, gas_constant: f32, radius: f32) -> Self {
+        let h = 3.0 * radius;
         Self {
             gravity: Vector3::new(0.0, -9.81, 0.0),
             box_size,
             wall_damping: 0.1,
             h,
-            mass: 1.5,
-            rest_density: 10.0,
-            gas_const: 2000.0,
+            particle_mass: 1.5,
+            rest_density,
+            gas_constant,
             viscosity,
             grid: Grid::new(h),
         }
@@ -56,16 +56,16 @@ impl Simulator {
             let mut neighbors = Vec::with_capacity(32);
             self.grid.get_neighbors(particle.position, &mut neighbors);
             let mut density_sum = 0.0;
-            density_sum += self.mass * self.poly6(0.0);
+            density_sum += self.particle_mass * self.poly6(0.0);
             for &i in &neighbors {
                 let particle_i = &particles[i];
                 let distance_squared = (particle.position - particle_i.position).norm_squared();
                 if distance_squared > 0.000001 && distance_squared < self.h * self.h {
-                    density_sum += self.mass * self.poly6(distance_squared);
+                    density_sum += self.particle_mass * self.poly6(distance_squared);
                 }
             }
             let density = density_sum.max(0.001);
-            let pressure = self.gas_const * (density - self.rest_density).max(0.0);
+            let pressure = self.gas_constant * (density - self.rest_density).max(0.0);
             (density, pressure)
         }).collect()
     }
@@ -82,7 +82,7 @@ impl Simulator {
     // Obliczanie sił działających na każdą cząstkę
     fn calculate_forces(&self, particles: &[Particle]) -> Vec<Vector3<f32>> {
         particles.par_iter().map(|p| {
-            let mut total_force = self.gravity * self.mass;
+            let mut total_force = self.gravity * self.particle_mass;
             let mut neighbors = Vec::with_capacity(32);
             self.grid.get_neighbors(p.position, &mut neighbors);
 
@@ -96,14 +96,14 @@ impl Simulator {
                     let distance = distance_squared.sqrt();
 
                     // Siła wynikająca z ciśnienia
-                    let scalar = self.mass * (p.pressure + particle_i.pressure) / (2.0 * particle_i.density);
-                    let grad_w = difference.normalize() * self.pressure_gradient(distance);
-                    total_force -= grad_w * scalar;
+                    let scalar = self.particle_mass * (p.pressure + particle_i.pressure) / (2.0 * particle_i.density);
+                    let gradient_w = difference.normalize() * self.pressure_gradient(distance);
+                    total_force -= gradient_w * scalar;
 
                     // Siła wynikająca z lepkości
                     let velocity_difference = particle_i.velocity - p.velocity;
-                    let visc_laplacian = self.viscosity_laplacian(distance);
-                    total_force += velocity_difference * (self.mass / particle_i.density * self.viscosity * visc_laplacian);
+                    let viscosity_laplacian = self.viscosity_laplacian(distance);
+                    total_force += velocity_difference * (self.particle_mass / particle_i.density * self.viscosity * viscosity_laplacian);
                 }
             }
             total_force
@@ -120,7 +120,7 @@ impl Simulator {
                 particle.velocity = Vector3::zeros();
             }
 
-            let acceleration = force / self.mass;
+            let acceleration = force / self.particle_mass;
             particle.velocity += acceleration * dt;
             particle.position += particle.velocity * dt;
 

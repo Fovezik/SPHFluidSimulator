@@ -1,6 +1,11 @@
-pub const PARTICLES_PER_AXIS: usize = 30; // Liczba cząstek na oś
-pub const START_POSITION: (f32, f32, f32) = (5.0, 5.0, 5.0); // Pozycja startowa cząstek
-pub const BOX_SIZE: f32 = 30.0; // Rozmiar pudełka symulacji
+pub const PARTICLES_PER_AXIS: usize = 15; // Liczba cząstek na oś
+pub const START_POSITION: (f32, f32, f32) = (0.0, 0.0, 0.0); // Pozycja startowa cząstek
+pub const BOX_SIZE: f32 = 15.0; // Rozmiar pudełka symulacji
 pub const VISCOSITY: f32 = 2.5; // Współczynnik lepkości płynu
+pub const REST_DENSITY: f32 = 10.0; // Gęstość spoczynkowa płynu
+pub const GAS_CONST: f32 = 2000.0; // Stała gazowa używana do obliczania ciśnienia
+pub const TIME_STEP: f32 = 0.008; // Krok czasowy symulacji
+pub const RADIUS: f32 = 0.4; // Promień cząstki
 pub const PARTICLE_COLOR: (f32, f32, f32) = (0.0, 0.7, 1.0); // Kolor cząstek
 pub const BOX_COLOR: (f32, f32, f32) = (1.0, 1.0, 1.0); // Kolor pudełka symulacji
+pub const WINDOW_SIZE: (u32, u32) = (1280, 720); // Rozmiar okna aplikacji
